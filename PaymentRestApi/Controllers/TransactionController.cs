@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PaymentRestApi.DTO;
 using PaymentRestApi.Entities;
 using PaymentRestApi.FakeDB;
+using PaymentRestApi.Validation;
 
 namespace PaymentRestApi.Controllers
 {
@@ -13,29 +14,20 @@ namespace PaymentRestApi.Controllers
         [HttpPost("deposit")]
         public IActionResult Deposit(DepositDTO depositDto)
         {
-            if (depositDto!=null)
+            if (depositDto != null)
             {
-                var account=FakeDb.accounts.Find(c=>c.accountNumber==depositDto.accountNumber);
+                var account = FakeDb.accounts.Find(c => c.accountNumber == depositDto.accountNumber);
                 if (account != null)
                 {
-                    if (account.accountType==(AccountType)0)
+                    if (Validation.Validation.IndividualAccountTypeValidation(account))
                     {
                         account.balance += depositDto.amount;
-                        var transaction = new Transaction()
-                        {
-                            Id = (FakeDb.transactions.Count),
-                            amount = depositDto.amount,
-                            accountNumber = account.accountNumber,
-                            transactionType = (TransactionType)1,
-                            createdAt = DateTime.Now,
-
-                        };
-                        FakeDb.transactions.Add(transaction);
+                        var transaction = Helper.Helper.AddDepositTransaction(account, depositDto.amount);
                         return Ok(transaction);
                     }
                     return BadRequest("Account type is not an individual account");
                 }
-                return BadRequest("Account number is not valid");
+                return BadRequest("Account number is not a valid account");
             }
             return BadRequest("There are missing parameters");
         }
@@ -48,24 +40,23 @@ namespace PaymentRestApi.Controllers
                 var account = FakeDb.accounts.Find(c => c.accountNumber == withdrawDto.accountNumber);
                 if (account != null)
                 {
-                    if (account.accountType == (AccountType)0)
+                    if (Validation.Validation.IndividualAccountTypeValidation(account))
                     {
-                        account.balance -= withdrawDto.amount;
-                        var transaction = new Transaction()
+                        if (Validation.Validation.WithdrawAccountBalanceValidation(account, withdrawDto.amount))
                         {
-                            Id = (FakeDb.transactions.Count),
-                            amount = withdrawDto.amount,
-                            accountNumber = account.accountNumber,
-                            transactionType = (TransactionType)2,
-                            createdAt = DateTime.Now,
+                            account.balance -= withdrawDto.amount;
+                            var transaction = Helper.Helper.AddWithdrawTransaction(account, withdrawDto.amount);
+                            return Ok(transaction);
+                        }
+                        else
+                        {
+                            return BadRequest("Insufficient balance for transaction.");
+                        }
 
-                        };
-                        FakeDb.transactions.Add(transaction);
-                        return Ok(transaction);
                     }
                     return BadRequest("Account type is not an individual account");
                 }
-                return BadRequest("Account number is not valid");
+                return BadRequest("Account number is not a valid account");
             }
             return BadRequest("There are missing parameters");
         }
@@ -73,15 +64,61 @@ namespace PaymentRestApi.Controllers
         [HttpGet("accounting /{accountNumber}")]
         public IActionResult TransactionHistory(int accountNumber)
         {
-            var account=FakeDb.accounts.Find(c => c.accountNumber == accountNumber);
-            if (account!=null)
+            var account = FakeDb.accounts.Find(c => c.accountNumber == accountNumber);
+            if (account != null)
             {
-                List<Transaction> transectionsByAccountNumber =FakeDb.transactions.FindAll(c => c.accountNumber == accountNumber);
-                
+                List<Transaction> transectionsByAccountNumber = FakeDb.transactions.FindAll(c => c.accountNumber == accountNumber);
+
                 return Ok(transectionsByAccountNumber);
             }
-            return BadRequest("Account number is not valid");
-            
+            return BadRequest("Account number is not a valid account");
+
+        }
+
+        [HttpPost("payment")]
+        public IActionResult Payment(PaymentDTO paymentDTO)
+        {
+            var sender = FakeDb.accounts.Find(c => c.accountNumber == paymentDTO.senderAccount);
+            var receiver = FakeDb.accounts.Find(c => c.accountNumber == paymentDTO.receiverAccount);
+            if (sender != null && receiver != null)
+            {
+                if (Validation.Validation.IndividualAccountTypeValidation(sender))
+                {
+                    if (Validation.Validation.CorporateAccountTypeValidation(receiver))
+                    {
+                        if (Validation.Validation.CurrencyCodeTypeValidation(sender, receiver))
+                        {
+                            if (Validation.Validation.WithdrawAccountBalanceValidation(sender, paymentDTO.amount))
+                            {
+                                sender.balance -= paymentDTO.amount;
+                                receiver.balance += paymentDTO.amount;
+                                var senderTransaction = Helper.Helper.AddWithdrawTransaction(sender, paymentDTO.amount);
+                                var receiverTransaction = Helper.Helper.AddDepositTransaction(receiver, paymentDTO.amount);
+                                return Ok("Payment transaction completed successfully.");
+                            }
+                            else
+                            {
+                                return BadRequest("Insufficient balance for transaction.");
+                            }
+
+                        }
+                        else
+                        {
+                            return BadRequest("Sender account and receiver account currency types do not match");
+                        }
+
+                    }
+                    else
+                    {
+                        return BadRequest("Sender account number is not a corporate account");
+                    }
+                }
+                else
+                {
+                    return BadRequest("Sender account number is not a individual account");
+                }
+            }
+            return BadRequest("Account numbers is not valid account");
         }
     }
 }
