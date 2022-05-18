@@ -25,11 +25,11 @@ namespace PaymentRestApi.Controllers
                         var transaction = Helper.Helper.AddDepositTransaction(account, depositDto.amount);
                         return Ok(transaction);
                     }
-                    return BadRequest("Account type is not an individual account");
+                    return BadRequest("Account type is not an individual account.");
                 }
-                return BadRequest("Account number is not a valid account");
+                return BadRequest("Account number is not a valid account.");
             }
-            return BadRequest("There are missing parameters");
+            return BadRequest("There are missing parameters.");
         }
 
         [HttpPost("withdraw")]
@@ -54,11 +54,11 @@ namespace PaymentRestApi.Controllers
                         }
 
                     }
-                    return BadRequest("Account type is not an individual account");
+                    return BadRequest("Account type is not an individual account.");
                 }
-                return BadRequest("Account number is not a valid account");
+                return BadRequest("Account number is not a valid account.");
             }
-            return BadRequest("There are missing parameters");
+            return BadRequest("There are missing parameters.");
         }
 
         [HttpGet("accounting /{accountNumber}")]
@@ -71,7 +71,7 @@ namespace PaymentRestApi.Controllers
 
                 return Ok(transectionsByAccountNumber);
             }
-            return BadRequest("Account number is not a valid account");
+            return BadRequest("Account number is not a valid account.");
 
         }
 
@@ -104,21 +104,21 @@ namespace PaymentRestApi.Controllers
                         }
                         else
                         {
-                            return BadRequest("Sender account and receiver account currency types do not match");
+                            return BadRequest("Sender account and receiver account currency types do not match.");
                         }
 
                     }
                     else
                     {
-                        return BadRequest("Sender account number is not a corporate account");
+                        return BadRequest("Sender account number is not a corporate account.");
                     }
                 }
                 else
                 {
-                    return BadRequest("Sender account number is not a individual account");
+                    return BadRequest("Sender account number is not a individual account.");
                 }
             }
-            return BadRequest("Account numbers is not valid account");
+            return BadRequest("Account numbers is not valid account.");
         }
     }
 }

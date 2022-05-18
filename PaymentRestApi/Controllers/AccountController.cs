@@ -37,7 +37,7 @@ namespace PaymentRestApi.Controllers
             }
             else
             {
-                return BadRequest("Account number is not valid number");
+                return BadRequest("Account number is not a valid number.");
             }
             
            
